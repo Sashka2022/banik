@@ -1,0 +1,33 @@
+{
+  "name": "Area",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "\u05e9\u05dd \u05d4\u05ea\u05d7\u05d5\u05dd"
+    },
+    "color": {
+      "type": "string",
+      "title": "\u05e6\u05d1\u05e2",
+      "enum": [
+        "bg-blue-100",
+        "bg-green-100",
+        "bg-yellow-100",
+        "bg-purple-100",
+        "bg-pink-100",
+        "bg-orange-100",
+        "bg-teal-100"
+      ],
+      "default": "bg-purple-100"
+    },
+    "sort_order": {
+      "type": "number",
+      "title": "\u05e1\u05d3\u05e8",
+      "default": 0
+    }
+  },
+  "required": [
+    "name",
+    "color"
+  ]
+}

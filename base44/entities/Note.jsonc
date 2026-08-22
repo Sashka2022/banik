@@ -1,0 +1,39 @@
+{
+  "name": "Note",
+  "type": "object",
+  "properties": {
+    "content": {
+      "type": "string",
+      "title": "\u05ea\u05d5\u05db\u05df \u05d4\u05e4\u05ea\u05e7"
+    },
+    "color": {
+      "type": "string",
+      "title": "\u05e6\u05d1\u05e2",
+      "enum": [
+        "bg-yellow-100",
+        "bg-blue-100",
+        "bg-green-100",
+        "bg-pink-100",
+        "bg-purple-100",
+        "bg-orange-100"
+      ],
+      "default": "bg-yellow-100"
+    },
+    "is_done": {
+      "type": "boolean",
+      "title": "\u05d4\u05d5\u05e9\u05dc\u05dd",
+      "default": false
+    },
+    "calendar_reminder_id": {
+      "type": "string",
+      "title": "\u05de\u05d6\u05d4\u05d4 \u05ea\u05d6\u05db\u05d5\u05e8\u05ea \u05d1\u05d9\u05d5\u05de\u05df"
+    },
+    "calendar_reminder_link": {
+      "type": "string",
+      "title": "\u05e7\u05d9\u05e9\u05d5\u05e8 \u05dc\u05ea\u05d6\u05db\u05d5\u05e8\u05ea \u05d1\u05d9\u05d5\u05de\u05df"
+    }
+  },
+  "required": [
+    "content"
+  ]
+}
