@@ -1,0 +1,12 @@
+{
+  "name": "באניק",
+  "short_name": "באניק",
+  "description": "מנהל משימות אישי",
+  "start_url": "/banik/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1d4ed8",
+  "icons": [
+    { "src": "/banik/favicon.svg", "type": "image/svg+xml", "sizes": "any" }
+  ]
+}
