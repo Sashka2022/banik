@@ -7,6 +7,7 @@ import CalendarScheduler from "../components/CalendarScheduler";
 import UrgentTasksAlert from "../components/UrgentTasksAlert";
 import NotesSection from "../components/NotesSection";
 import AdminPanel from "../components/AdminPanel";
+import GoogleCalendarConnect from "../components/GoogleCalendarConnect";
 
 const PRIORITY_CONFIG = {
   high: { label: "דחוף 🔴", color: "bg-red-100 text-red-800 border-red-200", dot: "bg-red-500" },
@@ -132,6 +133,7 @@ export default function Dashboard() {
       )}
 
       <main className="max-w-3xl mx-auto px-4 py-6 pb-20">
+        <GoogleCalendarConnect />
         <UrgentTasksAlert tasks={tasks} />
         {/* Priority Summary */}
         <section className="mb-6">

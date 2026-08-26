@@ -128,8 +128,24 @@ export function createSupabaseBackedClient() {
     },
     functions: {
       async invoke(name, payload) {
-        if (name === "calendarScheduler") return mockCalendarScheduler(payload);
-        return { data: { error: `Function "${name}" is not available.` } };
+        if (name !== "calendarScheduler") {
+          return { data: { error: `Function "${name}" is not available.` } };
+        }
+        // Real Google Calendar integration via the calendarScheduler Edge Function
+        // (see supabase/functions/calendarScheduler) — falls back to the local
+        // heuristic mock only if Google Calendar isn't connected yet.
+        const { data, error } = await supabase.functions.invoke("calendarScheduler", { body: payload });
+        if (error) {
+          let body = null;
+          try {
+            body = await error.context?.json();
+          } catch {
+            // response wasn't JSON — fall through to the generic error message below
+          }
+          if (body?.error === "not_connected") return mockCalendarScheduler(payload);
+          return { data: body || { error: error.message } };
+        }
+        return { data };
       },
     },
     integrations: {
@@ -140,6 +156,26 @@ export function createSupabaseBackedClient() {
     agents: {
       getWhatsAppConnectURL() {
         return "#";
+      },
+    },
+    google: {
+      async connect() {
+        const { data, error } = await supabase.functions.invoke("google-oauth-start", { body: {} });
+        if (error) throw error;
+        if (!data?.authUrl) throw new Error("Failed to start the Google connect flow");
+        window.location.href = data.authUrl;
+      },
+      async getStatus() {
+        const { data, error } = await supabase.functions.invoke("google-status", { body: {} });
+        if (error) throw error;
+        return data;
+      },
+      async disconnect() {
+        const { data, error } = await supabase.functions.invoke("calendarScheduler", {
+          body: { action: "disconnect" },
+        });
+        if (error) throw error;
+        return data;
       },
     },
   };
