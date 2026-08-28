@@ -1,9 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight, AlertTriangle, Clock, CheckCircle, Sparkles, Loader2, TrendingDown, CalendarDays, MessageCircle, Shield } from "lucide-react";
+import { ArrowRight, AlertTriangle, Clock, CheckCircle, Loader2, TrendingDown, CalendarDays, MessageCircle, Shield } from "lucide-react";
 import { base44 } from "@/api/base44Client";
-import { Button } from "@/components/ui/button";
-import CalendarScheduler from "../components/CalendarScheduler";
 import UrgentTasksAlert from "../components/UrgentTasksAlert";
 import NotesSection from "../components/NotesSection";
 import AdminPanel from "../components/AdminPanel";
@@ -18,8 +16,6 @@ export default function Dashboard() {
   const [areas, setAreas] = useState([]);
   const [tasks, setTasks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [aiPlan, setAiPlan] = useState(null);
-  const [aiLoading, setAiLoading] = useState(false);
   const [expandedPriority, setExpandedPriority] = useState(null);
   const [showAdmin, setShowAdmin] = useState(false);
 
@@ -55,20 +51,6 @@ export default function Dashboard() {
   }).filter((a) => a.progress !== null);
 
   const neglectedArea = [...areaStats].sort((a, b) => a.progress - b.progress)[0];
-
-  const handleAIPlan = async () => {
-    setAiLoading(true);
-    const taskSummary = pending.slice(0, 20).map((t) => {
-      const area = areas.find((a) => a.id === t.area_id);
-      return `- "${t.title}" (עדיפות: ${t.priority === "high" ? "דחוף" : t.priority === "medium" ? "רגיל" : "יכול להמתין"}, תחום: ${area?.name || "כללי"}, התקדמות: ${t.progress || 0}%${t.estimated_hours ? `, זמן משוער: ${t.estimated_hours}ש'` : ""})`;
-    }).join("\n");
-
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `אתה עוזר חכם בשם "באניק". להלן רשימת המשימות הפתוחות של המשתמש:\n${taskSummary}\n\nהצע תכנית עבודה קצרה וברורה: ממה כדאי להתחיל קודם ולמה. כתוב 3-5 נקודות פעולה עם סדר עדיפויות ברור. היה ידידותי, מעשי ותמציתי.`,
-    });
-    setAiPlan(result);
-    setAiLoading(false);
-  };
 
   if (loading) {
     return (
@@ -219,43 +201,6 @@ export default function Dashboard() {
               <p className="text-center text-muted-foreground text-sm py-8">אין תחומים עם משימות עדיין</p>
             )}
           </div>
-        </section>
-
-        {/* AI Plan */}
-        <section className="mb-6">
-          <div className="bg-card border border-accent/20 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-base font-bold text-foreground flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-accent" />
-                באניק ממליץ – מאיפה להתחיל?
-              </h2>
-              <Button
-                size="sm"
-                onClick={handleAIPlan}
-                disabled={aiLoading || pending.length === 0}
-                className="bg-accent hover:bg-accent/90 text-accent-foreground text-xs"
-              >
-                {aiLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><Sparkles className="w-3.5 h-3.5 ml-1" />בקש תכנית</>}
-              </Button>
-            </div>
-
-            {aiPlan ? (
-              <div className="bg-accent/5 border border-accent/20 rounded-lg p-4 text-sm text-foreground leading-relaxed whitespace-pre-line">
-                {aiPlan}
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground italic">
-                {pending.length === 0
-                  ? "אין משימות פתוחות כרגע 🎉"
-                  : "לחץ על 'בקש תכנית' ובאניק יסתכל על כל המשימות שלך ויציע תכנית עבודה חכמה."}
-              </p>
-            )}
-          </div>
-        </section>
-
-        {/* Calendar Scheduler */}
-        <section className="mb-6">
-          <CalendarScheduler tasks={tasks} />
         </section>
 
         {/* Notes */}

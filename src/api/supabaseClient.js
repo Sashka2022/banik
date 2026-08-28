@@ -3,7 +3,6 @@
 // See supabase/schema.sql for the table/RLS setup this expects.
 
 import { createClient } from "@supabase/supabase-js";
-import { mockCalendarScheduler, mockInvokeLLM } from "./mockIntegrations";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -124,17 +123,6 @@ export function createSupabaseBackedClient() {
         const redirectTo = window.location.origin + import.meta.env.BASE_URL;
         const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
         if (error) throw error;
-      },
-    },
-    functions: {
-      async invoke(name, payload) {
-        if (name === "calendarScheduler") return mockCalendarScheduler(payload);
-        return { data: { error: `Function "${name}" is not available.` } };
-      },
-    },
-    integrations: {
-      Core: {
-        InvokeLLM: mockInvokeLLM,
       },
     },
     agents: {

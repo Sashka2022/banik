@@ -1,11 +1,10 @@
 import { useState } from "react";
-import { Pencil, Trash2, ChevronDown, Sparkles, Zap, Calendar, Loader2, FileText } from "lucide-react";
+import { Pencil, Trash2, ChevronDown, Calendar, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { base44 } from "@/api/base44Client";
+import { createGoogleCalendarLink } from "@/lib/utils";
 import SubtaskNode from "./SubtaskNode";
 import ProgressCircle from "./ProgressCircle";
-import TaskScheduler from "./TaskScheduler";
 
 const PRIORITY_CONFIG = {
   high: { border: "border-r-red-500", badge: "bg-red-100 text-red-800", label: "דחוף 🔴", value: 3, cardBg: "bg-red-50/40" },
@@ -28,21 +27,11 @@ function calculateDeepProgress(subtasks) {
   return total === 0 ? 0 : Math.round((completed / total) * 100);
 }
 
-function createGoogleCalendarLink(task) {
-  if (!task.due_date) return null;
-  const dateStr = task.due_date.replace(/-/g, "");
-  const text = encodeURIComponent(`משימה: ${task.title}`);
-  const details = encodeURIComponent("נוצר מבאניק.");
-  return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${dateStr}/${dateStr}&details=${details}`;
-}
-
 export default function TaskCard({ task, area, showArea, onDelete, onUpdate }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({ title: task.title, dueDate: task.due_date || "" });
   const [newSubtask, setNewSubtask] = useState("");
-  const [aiLoading, setAiLoading] = useState(false);
-  const [aiMessage, setAiMessage] = useState(null);
   const [editEstimatedHours, setEditEstimatedHours] = useState(task.estimated_hours || "");
   const [docUrl, setDocUrl] = useState(task.doc_url || null);
   const [creatingDoc, setCreatingDoc] = useState(false);
@@ -114,74 +103,7 @@ export default function TaskCard({ task, area, showArea, onDelete, onUpdate }) {
     await onUpdate(task.id, { subtasks: newSubtasks, progress: calculateDeepProgress(newSubtasks) });
   };
 
-  const handleAITimeEstimate = async () => {
-    setAiLoading(true);
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `הערך את הזמן הנדרש לביצוע המשימה: "${task.title}". התחשב בכל תתי המשימות אם יש.${task.subtasks?.length ? ` תתי משימות: ${task.subtasks.map((s) => s.title).join(", ")}` : ""} החזר רק מספר בשעות (לדוגמה: 1.5 או 3).`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          hours: { type: "number" },
-          explanation: { type: "string" },
-        },
-      },
-    });
-    if (result?.hours) {
-      await onUpdate(task.id, { estimated_hours: result.hours });
-      setAiMessage(`⏱️ באניק מעריך: ${result.hours} שעות${result.explanation ? " – " + result.explanation : ""}`);
-      setTimeout(() => setAiMessage(null), 7000);
-    }
-    setAiLoading(false);
-  };
-
-  const handleAIBreakdown = async () => {
-    setAiLoading(true);
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `פרק את המשימה: "${task.title}" לעד 5 תתי-משימות קטנות ופרקטיות. כל אובייקט חייב להכיל "title" ו-"estimatedHours" (מספר בשעות).`,
-      response_json_schema: {
-        type: "object",
-        properties: {
-          subtasks: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                title: { type: "string" },
-                estimatedHours: { type: "number" },
-              },
-            },
-          },
-        },
-      },
-    });
-    if (result?.subtasks && Array.isArray(result.subtasks)) {
-      const existing = task.subtasks || [];
-      const newItems = result.subtasks.map((item) => ({
-        id: crypto.randomUUID(),
-        title: item.title,
-        estimatedHours: item.estimatedHours || null,
-        completed: false,
-        subtasks: [],
-      }));
-      const combined = [...existing, ...newItems];
-      await onUpdate(task.id, { subtasks: combined, progress: calculateDeepProgress(combined) });
-    }
-    setAiLoading(false);
-  };
-
-  const handleAIMotivation = async () => {
-    setAiLoading(true);
-    const result = await base44.integrations.Core.InvokeLLM({
-      prompt: `כתוב משפט אחד קצר (עד 15 מילים) של מוטיבציה למשימה: "${task.title}". תהיה קליל וחיובי. חתום בתור "באניק"`,
-    });
-    if (result) {
-      setAiMessage(result);
-      setTimeout(() => setAiMessage(null), 5000);
-    }
-    setAiLoading(false);
-  };
-
-  const calendarLink = createGoogleCalendarLink(task);
+  const calendarLink = createGoogleCalendarLink({ title: `משימה: ${task.title}`, dueDate: task.due_date });
 
   const handleCreateDoc = async () => {
     setCreatingDoc(true);
@@ -206,12 +128,6 @@ export default function TaskCard({ task, area, showArea, onDelete, onUpdate }) {
         isCompleted ? "opacity-60" : ""
       }`}
     >
-      {aiLoading && (
-        <div className="absolute inset-0 bg-card/70 flex items-center justify-center z-10 backdrop-blur-[1px]">
-          <Loader2 className="w-7 h-7 text-accent animate-spin" />
-        </div>
-      )}
-
       {/* Header */}
       <div
         className="p-4 cursor-pointer hover:bg-secondary/50 flex justify-between items-start transition-colors"
@@ -303,36 +219,11 @@ export default function TaskCard({ task, area, showArea, onDelete, onUpdate }) {
         </div>
       </div>
 
-      {/* AI Message */}
-      {aiMessage && (
-        <div className="mx-4 mb-2 bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-sm text-yellow-800 font-medium animate-fade-in-up" dir="rtl">
-          💡 {aiMessage}
-        </div>
-      )}
-
       {/* Expanded Section */}
       {isExpanded && !isEditing && (
         <div className="px-4 pb-4 bg-secondary/30 border-t border-border">
           {/* Action Buttons */}
           <div className="flex flex-wrap gap-2 mt-4 mb-4">
-            <button
-              onClick={handleAIBreakdown}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-accent/10 text-accent text-xs font-medium rounded-full hover:bg-accent/20 transition-colors border border-accent/20"
-            >
-              <Sparkles className="w-3.5 h-3.5" /> פרק למשימות
-            </button>
-            <button
-              onClick={handleAITimeEstimate}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-purple-50 text-purple-700 text-xs font-medium rounded-full hover:bg-purple-100 transition-colors border border-purple-200"
-            >
-              ⏱️ הערכת זמן (באניק)
-            </button>
-            <button
-              onClick={handleAIMotivation}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-50 text-yellow-700 text-xs font-medium rounded-full hover:bg-yellow-100 transition-colors border border-yellow-200"
-            >
-              <Zap className="w-3.5 h-3.5" /> עזור לי!
-            </button>
             {calendarLink && (
               <a
                 href={calendarLink}
@@ -400,8 +291,6 @@ export default function TaskCard({ task, area, showArea, onDelete, onUpdate }) {
               </button>
             </form>
           </div>
-
-          <TaskScheduler task={task} />
 
           <div className="flex justify-end mt-3">
             <button

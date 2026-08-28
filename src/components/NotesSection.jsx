@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Plus, Trash2, CalendarCheck, Loader2, ExternalLink, X } from "lucide-react";
 import { base44 } from "@/api/base44Client";
+import { createGoogleCalendarLink } from "@/lib/utils";
 
 const NOTE_COLORS = [
   { value: "bg-yellow-100", label: "צהוב" },
@@ -15,35 +16,18 @@ function ReminderModal({ note, onClose }) {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("09:00");
   const [type, setType] = useState("reminder"); // "reminder" | "task"
-  const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(null);
 
-  const handleBook = async () => {
+  const handleOpenCalendar = async () => {
     if (!date) return;
-    setLoading(true);
-    const startISO = `${date}T${time}:00`;
-    const start = new Date(startISO);
+    const start = new Date(`${date}T${time}:00`);
     const end = new Date(start.getTime() + 30 * 60 * 1000);
+    const prefix = type === "task" ? "✅" : "🔔";
+    const link = createGoogleCalendarLink({ title: `${prefix} ${note.content}`, start, end });
 
-    const res = await base44.functions.invoke("calendarScheduler", {
-      action: "book_note_reminder",
-      note: {
-        content: note.content,
-        noteId: note.id,
-        type,
-        start: start.toISOString(),
-        end: end.toISOString(),
-      },
-    });
-
-    if (res.data?.success) {
-      await base44.entities.Note.update(note.id, {
-        calendar_reminder_id: res.data.eventId,
-        calendar_reminder_link: res.data.eventLink,
-      });
-      setDone(res.data.eventLink);
-    }
-    setLoading(false);
+    window.open(link, "_blank", "noopener,noreferrer");
+    await base44.entities.Note.update(note.id, { calendar_reminder_link: link });
+    setDone(link);
   };
 
   return (
@@ -58,7 +42,7 @@ function ReminderModal({ note, onClose }) {
         {done ? (
           <div className="text-center py-4">
             <div className="text-3xl mb-2">✅</div>
-            <p className="text-sm font-semibold text-green-700 mb-3">שובץ בהצלחה!</p>
+            <p className="text-sm font-semibold text-green-700 mb-3">נפתח ביומן Google בלשונית חדשה — אשר שם שמירה.</p>
             <a
               href={done}
               target="_blank"
@@ -102,11 +86,11 @@ function ReminderModal({ note, onClose }) {
             </div>
 
             <button
-              onClick={handleBook}
-              disabled={!date || loading}
+              onClick={handleOpenCalendar}
+              disabled={!date}
               className="w-full py-2.5 bg-primary text-primary-foreground rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><CalendarCheck className="w-4 h-4" /> שבץ</>}
+              <CalendarCheck className="w-4 h-4" /> פתח ביומן Google
             </button>
           </>
         )}

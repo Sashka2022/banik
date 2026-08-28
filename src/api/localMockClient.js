@@ -3,9 +3,13 @@
 // still fully usable on this machine. All data lives in this browser's
 // localStorage — nothing is synced anywhere or across devices.
 
-import { uid, mockCalendarScheduler, mockInvokeLLM } from "./mockIntegrations";
-
 const STORAGE_PREFIX = "banik_local_";
+
+function uid() {
+  return typeof crypto !== "undefined" && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `id_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+}
 
 function readStore(key) {
   try {
@@ -104,17 +108,6 @@ export function createLocalMockClient() {
       },
       redirectToLogin() {
         // No login flow in local mode.
-      },
-    },
-    functions: {
-      async invoke(name, payload) {
-        if (name === "calendarScheduler") return mockCalendarScheduler(payload);
-        return { data: { error: `Function "${name}" is not available in local mode.` } };
-      },
-    },
-    integrations: {
-      Core: {
-        InvokeLLM: mockInvokeLLM,
       },
     },
     agents: {
